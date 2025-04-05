@@ -1,68 +1,78 @@
--- Full Revamp: Functional ESP, Aimbot, and UI Toggles
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 
 -- Global Toggles
 _G.SILENT_AIM_ENABLED = false
 _G.AIMBOT_ENABLED = false
 _G.WALLBANG_ENABLED = false
-_G.ESP_ENABLED = false
+_G.ESP_ENABLED = true
 _G.FOV_ENABLED = false
 _G.TRACERS_ENABLED = false
-_G.BOXES_ENABLED = false
-_G.NAMES_ENABLED = false
+_G.BOXES_ENABLED = true
+_G.NAMES_ENABLED = true
+_G.SKELETON_ENABLED = false
 _G.TEAM_CHECK_ENABLED = false
 _G.AIM_FOV = 300
 
 -- UI Setup
 local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-screenGui.Name = "AimHubModernUI"
+screenGui.Name = "GoonerHubV1UI"
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local uiFrame = Instance.new("Frame", screenGui)
+local uiFrame = Instance.new("Frame")
+uiFrame.Parent = screenGui
 uiFrame.Size = UDim2.new(0, 460, 0, 360)
 uiFrame.Position = UDim2.new(0.5, -230, 0.5, -180)
-uiFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+uiFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 uiFrame.BorderSizePixel = 0
 uiFrame.Active = true
 uiFrame.Draggable = true
 Instance.new("UICorner", uiFrame).CornerRadius = UDim.new(0, 10)
 
-local sidebar = Instance.new("Frame", uiFrame)
+local sidebar = Instance.new("Frame")
+sidebar.Parent = uiFrame
 sidebar.Size = UDim2.new(0, 120, 1, 0)
-sidebar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 sidebar.BorderSizePixel = 0
 Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 6)
 
-local titleLabel = Instance.new("TextLabel", sidebar)
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
-titleLabel.Text = "⚙️ AimHub"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+local titleBar = Instance.new("Frame")
+titleBar.Parent = sidebar
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(255, 221, 0)
+titleBar.BorderSizePixel = 0
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Parent = titleBar
+titleLabel.Size = UDim2.new(1, 0, 1, 0)
+titleLabel.Text = "⚙️ GoonerHubV1(beta)"
+titleLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 18
 titleLabel.BackgroundTransparency = 1
 
-local tabs = {"MAIN", "VISUALS"}
+local tabs = {"MAIN", "VISUALS", "CREDITS"}
 local tabButtons = {}
 local contentFrames = {}
 
 for i, name in ipairs(tabs) do
-    local tabBtn = Instance.new("TextButton", sidebar)
+    local tabBtn = Instance.new("TextButton")
+    tabBtn.Parent = sidebar
     tabBtn.Size = UDim2.new(1, -20, 0, 30)
-    tabBtn.Position = UDim2.new(0, 10, 0, 40 + (i - 1) * 40)
+    tabBtn.Position = UDim2.new(0, 10, 0, 50 + (i - 1) * 40)
     tabBtn.Text = name
     tabBtn.Font = Enum.Font.GothamBold
-    tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    tabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    tabBtn.TextColor3 = Color3.fromRGB(255, 221, 0)
+    tabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     tabBtn.BorderSizePixel = 0
     Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 6)
     tabButtons[name] = tabBtn
 
-    local content = Instance.new("Frame", uiFrame)
+    local content = Instance.new("Frame")
+    content.Parent = uiFrame
     content.Position = UDim2.new(0, 130, 0, 10)
     content.Size = UDim2.new(1, -140, 1, -20)
     content.BackgroundTransparency = 1
@@ -70,26 +80,34 @@ for i, name in ipairs(tabs) do
     contentFrames[name] = content
 
     tabBtn.MouseButton1Click:Connect(function()
-        for _, frame in pairs(contentFrames) do frame.Visible = false end
+        for _, frame in pairs(contentFrames) do
+            frame.Visible = false
+        end
         content.Visible = true
     end)
 end
 
--- Utility for Toggles
+-- Utility for Toggles with Animation
 local function createToggle(parent, name, flag)
-    local toggle = Instance.new("TextButton", parent)
+    local toggle = Instance.new("TextButton")
+    toggle.Parent = parent
     toggle.Size = UDim2.new(1, -20, 0, 30)
     toggle.Position = UDim2.new(0, 10, 0, #parent:GetChildren() * 35)
     toggle.Text = "○ " .. name
     toggle.Font = Enum.Font.GothamBold
     toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    toggle.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     toggle.BorderSizePixel = 0
     Instance.new("UICorner", toggle).CornerRadius = UDim.new(1, 0)
 
     toggle.MouseButton1Click:Connect(function()
         _G[flag] = not _G[flag]
         toggle.Text = (_G[flag] and "● " or "○ ") .. name
+        local tween = TweenService:Create(toggle, TweenInfo.new(0.2), {
+            BackgroundColor3 = _G[flag] and Color3.fromRGB(255, 221, 0) or Color3.fromRGB(20, 20, 20),
+            TextColor3 = _G[flag] and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+        })
+        tween:Play()
     end)
 end
 
@@ -99,43 +117,114 @@ createToggle(contentFrames.MAIN, "Aimbot", "AIMBOT_ENABLED")
 createToggle(contentFrames.MAIN, "Wallbang", "WALLBANG_ENABLED")
 createToggle(contentFrames.MAIN, "Team Check", "TEAM_CHECK_ENABLED")
 
+-- Reset All Button
+local resetBtn = Instance.new("TextButton")
+resetBtn.Parent = contentFrames.MAIN
+resetBtn.Size = UDim2.new(1, -20, 0, 30)
+resetBtn.Position = UDim2.new(0, 10, 0, #contentFrames.MAIN:GetChildren() * 35)
+resetBtn.Text = "Reset All"
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+resetBtn.BackgroundColor3 = Color3.fromRGB(255, 221, 0)
+resetBtn.BorderSizePixel = 0
+Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(1, 0)
+resetBtn.MouseButton1Click:Connect(function()
+    for key, val in pairs(_G) do
+        if typeof(val) == "boolean" then _G[key] = false end
+    end
+    -- Refresh toggles visually
+    for _, frame in pairs(contentFrames) do
+        for _, child in pairs(frame:GetChildren()) do
+            if child:IsA("TextButton") and child.Text:sub(1,2) == "● " then
+                child.Text = child.Text:gsub("●", "○")
+                TweenService:Create(child, TweenInfo.new(0.2), {
+                    BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+                    TextColor3 = Color3.fromRGB(255, 255, 255)
+                }):Play()
+            end
+        end
+    end
+end)
+
 -- VISUALS Tab
 createToggle(contentFrames.VISUALS, "ESP", "ESP_ENABLED")
 createToggle(contentFrames.VISUALS, "FOV", "FOV_ENABLED")
 createToggle(contentFrames.VISUALS, "Tracers", "TRACERS_ENABLED")
 createToggle(contentFrames.VISUALS, "Boxes", "BOXES_ENABLED")
 createToggle(contentFrames.VISUALS, "Names", "NAMES_ENABLED")
+createToggle(contentFrames.VISUALS, "Skeleton", "SKELETON_ENABLED")
 
--- ESP + Tracers
-local function drawESP()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if _G.ESP_ENABLED then
-                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-                if onScreen then
-                    if _G.TRACERS_ENABLED then
-                        local tracer = Drawing.new("Line")
-                        tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                        tracer.To = Vector2.new(pos.X, pos.Y)
-                        tracer.Color = Color3.fromRGB(0, 170, 255)
-                        tracer.Thickness = 1
-                        tracer.Transparency = 1
-                        tracer.Visible = true
-                        task.delay(0.02, function()
-                            tracer:Remove()
-                        end)
-                    end
-                    if _G.BOXES_ENABLED then
-                        local box = Drawing.new("Square")
-                        box.Size = Vector2.new(50, 100)
-                        box.Position = Vector2.new(pos.X - 25, pos.Y - 50)
-                        box.Color = Color3.fromRGB(0, 170, 255)
-                        box.Thickness = 1
-                        box.Transparency = 1
-                        box.Visible = true
-                        task.delay(0.02, function()
-                            box:Remove()
-                        end)
+-- CREDITS Tab
+local creditLabel = Instance.new("TextLabel")
+creditLabel.Parent = contentFrames.CREDITS
+creditLabel.Size = UDim2.new(1, -20, 1, -20)
+creditLabel.Position = UDim2.new(0, 10, 0, 10)
+creditLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+creditLabel.TextColor3 = Color3.fromRGB(255, 221, 0)
+creditLabel.Text = "Made by GoonerHub Dev Team"
+creditLabel.Font = Enum.Font.GothamBold
+creditLabel.TextSize = 22
+creditLabel.TextWrapped = true
+creditLabel.TextXAlignment = Enum.TextXAlignment.Center
+creditLabel.TextYAlignment = Enum.TextYAlignment.Center
+
+-- Drawing ESP
+local function drawESP(player)
+    if _G.ESP_ENABLED then
+        -- Check if player has character and necessary parts
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+            local head = character:FindFirstChild("Head")
+            local torso = character:FindFirstChild("UpperTorso")
+            local lowerTorso = character:FindFirstChild("LowerTorso")
+
+            -- Convert world position to screen position
+            local screenPos, onScreen = Camera:WorldToScreenPoint(humanoidRootPart.Position)
+            
+            if onScreen then
+                -- Draw Bounding Box
+                if _G.BOXES_ENABLED then
+                    local box = Drawing.new("Square")
+                    local headPos, headOnScreen = Camera:WorldToScreenPoint(head.Position)
+                    local size = Vector2.new(100, 150)  -- Default box size
+                    box.Size = size
+                    box.Position = Vector2.new(screenPos.X - size.X / 2, screenPos.Y - size.Y / 2)
+                    box.Color = Color3.fromRGB(0, 121, 255) -- Blue color
+                    box.Thickness = 2
+                    box.Filled = false
+                    box.Visible = true
+                end
+
+                -- Draw Name Label
+                if _G.NAMES_ENABLED then
+                    local nameTag = Drawing.new("Text")
+                    nameTag.Text = player.Name
+                    nameTag.Position = Vector2.new(screenPos.X, screenPos.Y - 75)
+                    nameTag.Color = Color3.fromRGB(255, 255, 255)
+                    nameTag.Size = 15
+                    nameTag.Visible = true
+                end
+
+                -- Draw Skeleton (if enabled)
+                if _G.SKELETON_ENABLED then
+                    if torso and lowerTorso then
+                        local torsoScreenPos = Camera:WorldToScreenPoint(torso.Position)
+                        local lowerTorsoScreenPos = Camera:WorldToScreenPoint(lowerTorso.Position)
+                        
+                        local skeletonLine = Drawing.new("Line")
+                        skeletonLine.From = Vector2.new(screenPos.X, screenPos.Y)
+                        skeletonLine.To = Vector2.new(torsoScreenPos.X, torsoScreenPos.Y)
+                        skeletonLine.Color = Color3.fromRGB(0, 121, 255)
+                        skeletonLine.Thickness = 2
+                        skeletonLine.Visible = true
+
+                        local lowerTorsoLine = Drawing.new("Line")
+                        lowerTorsoLine.From = Vector2.new(torsoScreenPos.X, torsoScreenPos.Y)
+                        lowerTorsoLine.To = Vector2.new(lowerTorsoScreenPos.X, lowerTorsoScreenPos.Y)
+                        lowerTorsoLine.Color = Color3.fromRGB(0, 121, 255)
+                        lowerTorsoLine.Thickness = 2
+                        lowerTorsoLine.Visible = true
                     end
                 end
             end
@@ -143,44 +232,13 @@ local function drawESP()
     end
 end
 
+-- Run the ESP on RenderStepped
 RunService.RenderStepped:Connect(function()
     if _G.ESP_ENABLED then
-        drawESP()
-    end
-end)
-
--- Aimbot Function
-local function getClosestTarget()
-    local closest = nil
-    local shortest = math.huge
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if _G.TEAM_CHECK_ENABLED and player.Team == LocalPlayer.Team then
-                continue
-            end
-            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-            local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
-            if onScreen and dist < _G.AIM_FOV and dist < shortest then
-                shortest = dist
-                closest = player
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                drawESP(player)
             end
         end
-    end
-    return closest
-end
-
-RunService.RenderStepped:Connect(function()
-    if _G.AIMBOT_ENABLED and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local target = getClosestTarget()
-        if target and target.Character:FindFirstChild("HumanoidRootPart") then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.HumanoidRootPart.Position)
-        end
-    end
-end)
-
--- Right Shift Toggle UI
-UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        uiFrame.Visible = not uiFrame.Visible
     end
 end)
