@@ -1,0 +1,186 @@
+-- Full Revamp: Functional ESP, Aimbot, and UI Toggles
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- Global Toggles
+_G.SILENT_AIM_ENABLED = false
+_G.AIMBOT_ENABLED = false
+_G.WALLBANG_ENABLED = false
+_G.ESP_ENABLED = false
+_G.FOV_ENABLED = false
+_G.TRACERS_ENABLED = false
+_G.BOXES_ENABLED = false
+_G.NAMES_ENABLED = false
+_G.TEAM_CHECK_ENABLED = false
+_G.AIM_FOV = 300
+
+-- UI Setup
+local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+screenGui.Name = "AimHubModernUI"
+screenGui.ResetOnSpawn = false
+
+local uiFrame = Instance.new("Frame", screenGui)
+uiFrame.Size = UDim2.new(0, 460, 0, 360)
+uiFrame.Position = UDim2.new(0.5, -230, 0.5, -180)
+uiFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+uiFrame.BorderSizePixel = 0
+uiFrame.Active = true
+uiFrame.Draggable = true
+Instance.new("UICorner", uiFrame).CornerRadius = UDim.new(0, 10)
+
+local sidebar = Instance.new("Frame", uiFrame)
+sidebar.Size = UDim2.new(0, 120, 1, 0)
+sidebar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+sidebar.BorderSizePixel = 0
+Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 6)
+
+local titleLabel = Instance.new("TextLabel", sidebar)
+titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.Text = "⚙️ AimHub"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 18
+titleLabel.BackgroundTransparency = 1
+
+local tabs = {"MAIN", "VISUALS"}
+local tabButtons = {}
+local contentFrames = {}
+
+for i, name in ipairs(tabs) do
+    local tabBtn = Instance.new("TextButton", sidebar)
+    tabBtn.Size = UDim2.new(1, -20, 0, 30)
+    tabBtn.Position = UDim2.new(0, 10, 0, 40 + (i - 1) * 40)
+    tabBtn.Text = name
+    tabBtn.Font = Enum.Font.GothamBold
+    tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    tabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    tabBtn.BorderSizePixel = 0
+    Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 6)
+    tabButtons[name] = tabBtn
+
+    local content = Instance.new("Frame", uiFrame)
+    content.Position = UDim2.new(0, 130, 0, 10)
+    content.Size = UDim2.new(1, -140, 1, -20)
+    content.BackgroundTransparency = 1
+    content.Visible = (i == 1)
+    contentFrames[name] = content
+
+    tabBtn.MouseButton1Click:Connect(function()
+        for _, frame in pairs(contentFrames) do frame.Visible = false end
+        content.Visible = true
+    end)
+end
+
+-- Utility for Toggles
+local function createToggle(parent, name, flag)
+    local toggle = Instance.new("TextButton", parent)
+    toggle.Size = UDim2.new(1, -20, 0, 30)
+    toggle.Position = UDim2.new(0, 10, 0, #parent:GetChildren() * 35)
+    toggle.Text = "○ " .. name
+    toggle.Font = Enum.Font.GothamBold
+    toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    toggle.BorderSizePixel = 0
+    Instance.new("UICorner", toggle).CornerRadius = UDim.new(1, 0)
+
+    toggle.MouseButton1Click:Connect(function()
+        _G[flag] = not _G[flag]
+        toggle.Text = (_G[flag] and "● " or "○ ") .. name
+    end)
+end
+
+-- MAIN Tab
+createToggle(contentFrames.MAIN, "Silent Aim", "SILENT_AIM_ENABLED")
+createToggle(contentFrames.MAIN, "Aimbot", "AIMBOT_ENABLED")
+createToggle(contentFrames.MAIN, "Wallbang", "WALLBANG_ENABLED")
+createToggle(contentFrames.MAIN, "Team Check", "TEAM_CHECK_ENABLED")
+
+-- VISUALS Tab
+createToggle(contentFrames.VISUALS, "ESP", "ESP_ENABLED")
+createToggle(contentFrames.VISUALS, "FOV", "FOV_ENABLED")
+createToggle(contentFrames.VISUALS, "Tracers", "TRACERS_ENABLED")
+createToggle(contentFrames.VISUALS, "Boxes", "BOXES_ENABLED")
+createToggle(contentFrames.VISUALS, "Names", "NAMES_ENABLED")
+
+-- ESP + Tracers
+local function drawESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if _G.ESP_ENABLED then
+                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    if _G.TRACERS_ENABLED then
+                        local tracer = Drawing.new("Line")
+                        tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                        tracer.To = Vector2.new(pos.X, pos.Y)
+                        tracer.Color = Color3.fromRGB(0, 170, 255)
+                        tracer.Thickness = 1
+                        tracer.Transparency = 1
+                        tracer.Visible = true
+                        task.delay(0.02, function()
+                            tracer:Remove()
+                        end)
+                    end
+                    if _G.BOXES_ENABLED then
+                        local box = Drawing.new("Square")
+                        box.Size = Vector2.new(50, 100)
+                        box.Position = Vector2.new(pos.X - 25, pos.Y - 50)
+                        box.Color = Color3.fromRGB(0, 170, 255)
+                        box.Thickness = 1
+                        box.Transparency = 1
+                        box.Visible = true
+                        task.delay(0.02, function()
+                            box:Remove()
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if _G.ESP_ENABLED then
+        drawESP()
+    end
+end)
+
+-- Aimbot Function
+local function getClosestTarget()
+    local closest = nil
+    local shortest = math.huge
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if _G.TEAM_CHECK_ENABLED and player.Team == LocalPlayer.Team then
+                continue
+            end
+            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+            if onScreen and dist < _G.AIM_FOV and dist < shortest then
+                shortest = dist
+                closest = player
+            end
+        end
+    end
+    return closest
+end
+
+RunService.RenderStepped:Connect(function()
+    if _G.AIMBOT_ENABLED and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local target = getClosestTarget()
+        if target and target.Character:FindFirstChild("HumanoidRootPart") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.HumanoidRootPart.Position)
+        end
+    end
+end)
+
+-- Right Shift Toggle UI
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        uiFrame.Visible = not uiFrame.Visible
+    end
+end)
