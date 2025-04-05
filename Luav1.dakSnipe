@@ -14,9 +14,10 @@ _G.WALLBANG_ENABLED = false
 _G.ESP_ENABLED = true
 _G.FOV_ENABLED = false
 _G.TRACERS_ENABLED = false
-_G.BOXES_ENABLED = true
 _G.NAMES_ENABLED = true
-_G.SKELETON_ENABLED = false
+_G.SKELETON_ENABLED = true
+_G.HEALTH_ENABLED = true
+_G.DISTANCE_ENABLED = true
 _G.TEAM_CHECK_ENABLED = false
 _G.AIM_FOV = 300
 
@@ -156,9 +157,10 @@ end)
 createToggle(contentFrames.VISUALS, "ESP", "ESP_ENABLED")
 createToggle(contentFrames.VISUALS, "FOV", "FOV_ENABLED")
 createToggle(contentFrames.VISUALS, "Tracers", "TRACERS_ENABLED")
-createToggle(contentFrames.VISUALS, "Boxes", "BOXES_ENABLED")
 createToggle(contentFrames.VISUALS, "Names", "NAMES_ENABLED")
 createToggle(contentFrames.VISUALS, "Skeleton", "SKELETON_ENABLED")
+createToggle(contentFrames.VISUALS, "Health", "HEALTH_ENABLED")
+createToggle(contentFrames.VISUALS, "Distance", "DISTANCE_ENABLED")
 
 -- CREDITS Tab
 local creditLabel = Instance.new("TextLabel")
@@ -174,32 +176,19 @@ creditLabel.TextWrapped = true
 creditLabel.TextXAlignment = Enum.TextXAlignment.Center
 creditLabel.TextYAlignment = Enum.TextYAlignment.Center
 
--- ESP Drawing Functions (Box, Name, Skeleton)
+-- New ESP Drawing Functions (Name, Skeleton, Health, Distance)
 local function drawESP(player)
     if _G.ESP_ENABLED then
         local character = player.Character
         if character and character:FindFirstChild("HumanoidRootPart") then
             local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
             local head = character:FindFirstChild("Head")
-            local torso = character:FindFirstChild("UpperTorso")
-            local lowerTorso = character:FindFirstChild("LowerTorso")
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local distance = (humanoidRootPart.Position - Camera.CFrame.Position).Magnitude
 
             -- Convert world position to screen position
             local screenPos, onScreen = Camera:WorldToScreenPoint(humanoidRootPart.Position)
             if onScreen then
-                -- Draw Bounding Box
-                if _G.BOXES_ENABLED then
-                    local box = Drawing.new("Square")
-                    local headPos, headOnScreen = Camera:WorldToScreenPoint(head.Position)
-                    local size = Vector2.new(100, 150)  -- Default box size
-                    box.Size = size
-                    box.Position = Vector2.new(screenPos.X - size.X / 2, screenPos.Y - size.Y / 2)
-                    box.Color = Color3.fromRGB(0, 121, 255) -- Blue color
-                    box.Thickness = 2
-                    box.Filled = false
-                    box.Visible = true
-                end
-
                 -- Draw Name Label
                 if _G.NAMES_ENABLED then
                     local nameTag = Drawing.new("Text")
@@ -210,26 +199,41 @@ local function drawESP(player)
                     nameTag.Visible = true
                 end
 
-                -- Draw Skeleton (if enabled)
+                -- Draw Skeleton
                 if _G.SKELETON_ENABLED then
-                    if torso and lowerTorso then
-                        local torsoScreenPos = Camera:WorldToScreenPoint(torso.Position)
-                        local lowerTorsoScreenPos = Camera:WorldToScreenPoint(lowerTorso.Position)
-                        
-                        local skeletonLine = Drawing.new("Line")
-                        skeletonLine.From = Vector2.new(screenPos.X, screenPos.Y)
-                        skeletonLine.To = Vector2.new(torsoScreenPos.X, torsoScreenPos.Y)
-                        skeletonLine.Color = Color3.fromRGB(0, 121, 255)
-                        skeletonLine.Thickness = 2
-                        skeletonLine.Visible = true
-
-                        local lowerTorsoLine = Drawing.new("Line")
-                        lowerTorsoLine.From = Vector2.new(torsoScreenPos.X, torsoScreenPos.Y)
-                        lowerTorsoLine.To = Vector2.new(lowerTorsoScreenPos.X, lowerTorsoScreenPos.Y)
-                        lowerTorsoLine.Color = Color3.fromRGB(0, 121, 255)
-                        lowerTorsoLine.Thickness = 2
-                        lowerTorsoLine.Visible = true
+                    if head then
+                        local headPos, headOnScreen = Camera:WorldToScreenPoint(head.Position)
+                        local line = Drawing.new("Line")
+                        line.From = Vector2.new(screenPos.X, screenPos.Y)
+                        line.To = Vector2.new(headPos.X, headPos.Y)
+                        line.Color = Color3.fromRGB(0, 121, 255)
+                        line.Thickness = 2
+                        line.Visible = true
                     end
+                end
+
+                -- Draw Health
+                if _G.HEALTH_ENABLED and humanoid then
+                    local health = humanoid.Health
+                    local maxHealth = humanoid.MaxHealth
+                    local healthPercent = health / maxHealth
+                    local healthBar = Drawing.new("Rectangle")
+                    healthBar.Position = Vector2.new(screenPos.X - 50, screenPos.Y + 25)
+                    healthBar.Size = Vector2.new(100, 10)
+                    healthBar.Color = Color3.fromRGB(255, 0, 0)
+                    healthBar.Filled = true
+                    healthBar.Visible = true
+                    healthBar.Size = Vector2.new(100 * healthPercent, 10)
+                end
+
+                -- Draw Distance
+                if _G.DISTANCE_ENABLED then
+                    local distanceLabel = Drawing.new("Text")
+                    distanceLabel.Text = string.format("Dist: %.1f", distance)
+                    distanceLabel.Position = Vector2.new(screenPos.X, screenPos.Y + 50)
+                    distanceLabel.Color = Color3.fromRGB(255, 255, 255)
+                    distanceLabel.Size = 14
+                    distanceLabel.Visible = true
                 end
             end
         end
